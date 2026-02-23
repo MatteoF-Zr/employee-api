@@ -1,8 +1,10 @@
 package br.com.tiago.schermack.projeto_teste_automatizado.service.impl;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,6 +19,7 @@ import br.com.tiago.schermack.projeto_teste_automatizado.dto.EmployeeRequestDTO;
 import br.com.tiago.schermack.projeto_teste_automatizado.dto.EmployeeResponseDTO;
 import br.com.tiago.schermack.projeto_teste_automatizado.entity.Employee;
 import br.com.tiago.schermack.projeto_teste_automatizado.repository.EmployeeRepository;
+import jakarta.persistence.EntityNotFoundException;
 
 @SpringBootTest
 class EmployeeServiceTest {
@@ -79,5 +82,45 @@ class EmployeeServiceTest {
         assertEquals("luiza@example.com", result.get(1).email());
 
         verify(employeeRepository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("Esse teste valida a atualizacao bem-sucedida do funcionario")
+    public void DeveAtualizarEmpregadoComSucesso() {
+
+        // arrange
+        Employee existing = new Employee("OldName", "old@example.com");
+        existing.setId(1L);
+
+        when(employeeRepository.findById(1L))
+                .thenReturn(Optional.of(existing));
+
+        EmployeeRequestDTO request = new EmployeeRequestDTO("NewName", "new@example.com");
+
+        // act
+        EmployeeResponseDTO response = employeeService.update(1L, request);
+
+        // assert
+        assertEquals(1L, response.id());
+        assertEquals("NewName", response.firstName());
+        assertEquals("new@example.com", response.email());
+
+        verify(employeeRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    @DisplayName("Esse teste valida que atualizar com id inexistente lança erro")
+    public void DeveRetornarErroAoAtualizarQuandoIdNaoExistir() {
+
+        // arrange
+        when(employeeRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        EmployeeRequestDTO request = new EmployeeRequestDTO("X", "x@example.com");
+
+        // act + assert
+        assertThrows(EntityNotFoundException.class, () -> employeeService.update(99L, request));
+
+        verify(employeeRepository, times(1)).findById(99L);
     }
 }
