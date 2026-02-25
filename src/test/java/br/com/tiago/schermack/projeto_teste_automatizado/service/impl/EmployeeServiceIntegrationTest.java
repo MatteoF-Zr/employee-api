@@ -1,23 +1,19 @@
 package br.com.tiago.schermack.projeto_teste_automatizado.service.impl;
 
-import br.com.tiago.schermack.projeto_teste_automatizado.dto.EmployeeRequestDTO;
-import br.com.tiago.schermack.projeto_teste_automatizado.dto.EmployeeResponseDTO;
-import br.com.tiago.schermack.projeto_teste_automatizado.entity.Employee;
-import br.com.tiago.schermack.projeto_teste_automatizado.repository.EmployeeRepository;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import br.com.tiago.schermack.projeto_teste_automatizado.dto.EmployeeRequestDTO;
+import br.com.tiago.schermack.projeto_teste_automatizado.dto.EmployeeResponseDTO;
+import jakarta.persistence.EntityNotFoundException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Transactional
@@ -26,19 +22,11 @@ public class EmployeeServiceIntegrationTest {
     @Autowired
     private EmployeeService employeeService;
 
-    @MockBean
-    private EmployeeRepository employeeRepository;
-
     @Test
     @DisplayName("Esse teste vai ser responsavel por validar a criacao do funcionario")
     public void DeveCriarEmpregadoERetornarResponseDTO() {
         // arrange
         EmployeeRequestDTO requestDTO = new EmployeeRequestDTO("Matteo", "matteofronza10@gmail.com");
-        Employee employeeSaved = new Employee(requestDTO.firstName(), requestDTO.email());
-        employeeSaved.setId(1L);
-
-        when(employeeRepository.save(any(Employee.class)))
-                .thenReturn(employeeSaved);
 
         // act
         EmployeeResponseDTO responseDTO = employeeService.create(requestDTO);
@@ -47,8 +35,6 @@ public class EmployeeServiceIntegrationTest {
         assertEquals(1L, responseDTO.id());
         assertEquals("Matteo", responseDTO.firstName());
         assertEquals("matteofronza10@gmail.com", responseDTO.email());
-
-        verify(employeeRepository, times(1)).save(any(Employee.class));
     }
 
     @Test
@@ -56,15 +42,13 @@ public class EmployeeServiceIntegrationTest {
     public void DeveListarERetornarEmpregado() {
 
         // arrange
-        Employee e1 = new Employee("Matteo", "matteo1@example.com");
-        e1.setId(1L);
+        EmployeeRequestDTO e1 = new EmployeeRequestDTO("Matteo", "matteo1@example.com");
 
-        Employee e2 = new Employee("Luiza", "luiza@example.com");
-        e2.setId(2L);
 
-        when(employeeRepository.findAll())
-                .thenReturn(List.of(e1, e2));
-
+        EmployeeRequestDTO e2 = new EmployeeRequestDTO("Luiza", "luiza@example.com");
+  
+        employeeService.create(e1);
+        employeeService.create(e2);
         // act
         List<EmployeeResponseDTO> result = employeeService.findAll();
 
@@ -79,7 +63,39 @@ public class EmployeeServiceIntegrationTest {
         assertEquals("Luiza", result.get(1).firstName());
         assertEquals("luiza@example.com", result.get(1).email());
 
-        verify(employeeRepository, times(1)).findAll();
+
+    }
+// delete e update
+    @Test
+    @DisplayName("Esse teste vai ser responsavel por validar a atualizacao de um funcionario")
+    public void DeveAtualizarEmpregadoERetornarResponseDTOAtualizado() {
+        // arrange
+        EmployeeRequestDTO requestDTO = new EmployeeRequestDTO("Matteo", "matteo@example.com");
+        EmployeeResponseDTO created = employeeService.create(requestDTO);
+        
+        EmployeeRequestDTO updateDTO = new EmployeeRequestDTO("Matteo Atualizado", "matteo.novo@example.com");
+
+        // act
+        EmployeeResponseDTO updated = employeeService.update(created.id(), updateDTO);
+
+        // assert
+        assertEquals(created.id(), updated.id());
+        assertEquals("Matteo Atualizado", updated.firstName());
+        assertEquals("matteo.novo@example.com", updated.email());
+    }
+
+    @Test
+    @DisplayName("Esse teste vai ser responsavel por validar a exclusao de um funcionario")
+    public void DeveExcluirEmpregado() {
+        // arrange
+        EmployeeRequestDTO requestDTO = new EmployeeRequestDTO("Matteo", "matteo@example.com");
+        EmployeeResponseDTO created = employeeService.create(requestDTO);
+
+        // act
+        employeeService.delete(created.id());
+
+        // assert
+        assertThrows(EntityNotFoundException.class, () -> employeeService.findById(created.id()));
     }
 
  }
